@@ -1,0 +1,19 @@
+{
+  "name": "@photon/openai-agent",
+  "module": "src/index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5",
+    "photon": "link:photon"
+  },
+  "exports": {
+      ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@openai/agents": "^0.1.9",
+    "zod": "3"
+  }
+}
