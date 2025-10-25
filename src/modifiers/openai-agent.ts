@@ -1,29 +1,33 @@
-import { run } from "@openai/agents";
-import type { App, ModifierReturn, SomeExtension, SomeUniqueModifier, WithoutKey } from "photon";
+import { assistant, run, user } from "@openai/agents";
+import { aware, type History, hook, reply } from "photon";
 import type { AgentBuilder } from "../core";
 import { buildMessage } from "../utils/build-message";
 
-type InPhoton = WithoutKey<"openaiAgent">;
-type OutPhoton = { openaiAgent: true };
+export function useOpenAIAgent(builder: AgentBuilder) {
+    hook(
+        async ({ history }) => {
+            const openAIHistory = (history as History).map((item) => {
+                if (item.role === "assistant") {
+                    return assistant(buildMessage(item.messages));
+                } else {
+                    return user(buildMessage(item.messages));
+                }
+            });
 
-export function openaiAgentModifier(builder: AgentBuilder): SomeUniqueModifier<InPhoton, OutPhoton> {
-    return {
-        unique: true,
-        main(app) {
-            return app.everyMessage(
-                async (context) => {
-                    const agent = builder(context);
-                    const result = await run(agent, buildMessage(context.messages));
-                    await context.send(result.finalOutput ?? "");
-                },
-                {
-                    mode: "break",
-                },
-            ) as any;
+            await aware(async (context) => {
+                const agent = builder(context);
+                const result = await run(agent, openAIHistory);
+                if (result.finalOutput) {
+                    await reply(result.finalOutput);
+                }
+            });
+
+            return {
+                history: [],
+            };
         },
-    };
+        {
+            type: "modifyHistoryBefore",
+        },
+    );
 }
-
-export type OpenAIAgentRegistry<A extends App<any, any, any, any>> = (
-    builder: AgentBuilder,
-) => ModifierReturn<typeof openaiAgentModifier, A>;
